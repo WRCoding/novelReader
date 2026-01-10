@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS 变量用于动态样式 */
+:root {
+  --bg-color: #ffffff;
+  --text-color: #333333;
+  --font-size: 18px;
+  --line-height: 1.8;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  font-family: var(--font-family);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 正常模式的滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 用户选择文本样式 */
+.reader-text::selection {
+  background: rgba(100, 149, 237, 0.3);
+}
+
+/* 平滑滚动 */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* 禁止选择 */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 沉浸式模式：隐藏滚动条但保留滚动功能 */
+.immersive-reader::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+.immersive-reader {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  overflow: auto !important;
+}
+
+/* 隐藏 react-window 内部滚动容器的滚动条（沉浸模式） */
+.immersive-reader > div::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+.immersive-reader > div {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  overflow: auto !important;
+}
