@@ -10,8 +10,10 @@
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac --arm64",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:all": "npm run build && electron-builder --mac --arm64 --win --x64",
+    "dist:win": "npm run build && electron-builder --win --x64 --ia32",
+    "dist:win64": "npm run build && electron-builder --win --x64",
+    "dist:win32": "npm run build && electron-builder --win --ia32",
+    "dist:all": "npm run build && electron-builder --mac --arm64 --win --x64 --ia32",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -70,10 +72,11 @@
     },
     "win": {
       "icon": "assets/icon.png",
+      "artifactName": "${productName} Setup ${version}-${arch}.${ext}",
       "target": [
         {
           "target": "nsis",
-          "arch": "x64"
+          "arch": ["x64", "ia32"]
         }
       ]
     },
@@ -81,7 +84,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "installerLanguages": ["zh_CN", "en_US"],
-      "language": "2052"
+      "language": "2052",
+      "perMachine": false
     }
   }
 }

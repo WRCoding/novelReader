@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog, screen, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, nativeImage, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
 let settingsWindow = null;
+let tray = null;
 
 // 获取保存的窗口大小
 function getSavedWindowSize() {
@@ -72,6 +73,81 @@ function createWindow(show = true) {
   });
 }
 
+// 创建系统托盘
+function createTray() {
+  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
+
+  // 根据平台调整托盘图标大小
+  let trayIcon;
+  if (process.platform === 'win32') {
+    // Windows 托盘图标建议 16x16 或 32x32
+    trayIcon = icon.resize({ width: 16, height: 16 });
+  } else if (process.platform === 'darwin') {
+    // macOS 菜单栏图标建议 16x16 或 22x22
+    trayIcon = icon.resize({ width: 16, height: 16 });
+    // 设置为模板图像，这样可以适应深色/浅色模式
+    trayIcon.setTemplateImage(true);
+  } else {
+    // Linux
+    trayIcon = icon.resize({ width: 16, height: 16 });
+  }
+
+  tray = new Tray(trayIcon);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示窗口',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    },
+    {
+      label: '设置',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+        createSettingsWindow();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setToolTip('小说阅读器');
+  tray.setContextMenu(contextMenu);
+
+  // 点击托盘图标显示窗口
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+
+  // Windows 双击托盘图标显示窗口
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(() => {
   // 设置 Dock 栏图标
   if (process.platform === 'darwin') {
@@ -80,6 +156,7 @@ app.whenReady().then(() => {
   }
 
   createWindow(false);  // 启动时不显示窗口
+  createTray();  // 创建系统托盘
 });
 
 // macOS 上点击 Dock 图标时显示窗口
