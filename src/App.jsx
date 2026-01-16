@@ -22,7 +22,7 @@ function App() {
 
   const hideTimeoutRef = useRef(null);
 
-  // 自动隐藏窗口逻辑
+  // 自动隐藏窗口逻辑（使用主进程鼠标位置检测，解决 Windows 兼容性问题）
   useEffect(() => {
     if (!window.electronAPI) return;
 
@@ -30,7 +30,8 @@ function App() {
     const shouldAutoHide = isImmersiveMode && hasStartedReading && settings.autoHideInImmersive;
 
     if (!shouldAutoHide) {
-      // 确保窗口可见
+      // 停止追踪并确保窗口可见
+      window.electronAPI.stopMouseTracking();
       window.electronAPI.setWindowOpacity(1);
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
@@ -39,26 +40,27 @@ function App() {
       return;
     }
 
-    const handleMouseEnter = () => {
-      // 鼠标进入，立即显示窗口
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
+    // 使用主进程的鼠标位置检测
+    const handleMousePosition = (isInside) => {
+      if (isInside) {
+        // 鼠标在窗口内，立即显示
+        if (hideTimeoutRef.current) {
+          clearTimeout(hideTimeoutRef.current);
+          hideTimeoutRef.current = null;
+        }
+        window.electronAPI.setWindowOpacity(1);
+      } else {
+        // 鼠标离开窗口，立即隐藏
+        window.electronAPI.setWindowOpacity(0);
       }
-      window.electronAPI.setWindowOpacity(1);
     };
 
-    const handleMouseLeave = () => {
-      // 鼠标离开，立即隐藏窗口
-      window.electronAPI.setWindowOpacity(0);
-    };
-
-    document.addEventListener('mouseenter', handleMouseEnter);
-    document.addEventListener('mouseleave', handleMouseLeave);
+    window.electronAPI.onMousePositionChanged(handleMousePosition);
+    window.electronAPI.startMouseTracking();
 
     return () => {
-      document.removeEventListener('mouseenter', handleMouseEnter);
-      document.removeEventListener('mouseleave', handleMouseLeave);
+      window.electronAPI.stopMouseTracking();
+      window.electronAPI.removeMousePositionListener();
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
       }

@@ -33,4 +33,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 窗口透明度
   setWindowOpacity: (opacity) => ipcRenderer.send('set-window-opacity', opacity),
+
+  // 鼠标位置追踪（用于沉浸模式自动隐藏）
+  startMouseTracking: () => ipcRenderer.send('start-mouse-tracking'),
+  stopMouseTracking: () => ipcRenderer.send('stop-mouse-tracking'),
+  onMousePositionChanged: (callback) => ipcRenderer.on('mouse-position-changed', (_, isInside) => callback(isInside)),
+  removeMousePositionListener: () => ipcRenderer.removeAllListeners('mouse-position-changed'),
 });

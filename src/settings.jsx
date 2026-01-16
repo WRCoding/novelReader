@@ -5,11 +5,14 @@ import './styles/index.css';
 const SettingsWindow = () => {
   const [settings, setSettings] = useState({
     backgroundColor: '#ffffff',
+    fontColor: '#333333',
+    autoFontColor: true,
     fontSize: 18,
     lineHeight: 1.8,
     linesPerScreen: 20,
     padding: 16,
     autoHideInImmersive: true,
+    scrollSpeed: 1,
   });
   const [shortcuts, setShortcuts] = useState({});
   const [recordingShortcut, setRecordingShortcut] = useState(null);
@@ -17,12 +20,20 @@ const SettingsWindow = () => {
   const [windowSizeSaved, setWindowSizeSaved] = useState(false);
   const [isMac, setIsMac] = useState(false);
   const colorInputRef = useRef(null);
+  const fontColorInputRef = useRef(null);
 
   const presetColors = [
     { name: '纯白', value: '#ffffff' },
     { name: '米黄', value: '#f4ecd8' },
     { name: '护眼绿', value: '#c7edcc' },
     { name: '深色', value: '#1e1e1e' },
+  ];
+
+  const presetFontColors = [
+    { name: '深灰', value: '#333333' },
+    { name: '纯黑', value: '#000000' },
+    { name: '浅灰', value: '#e0e0e0' },
+    { name: '米白', value: '#f5f5dc' },
   ];
 
   useEffect(() => {
@@ -72,6 +83,28 @@ const SettingsWindow = () => {
     saveSettings(newSettings);
   };
 
+  const handleFontColorChange = (color) => {
+    const newSettings = { ...settings, fontColor: color, autoFontColor: false };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  const handleAutoFontColorToggle = () => {
+    const newSettings = { ...settings, autoFontColor: !settings.autoFontColor };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  const handleCustomFontColorPicker = () => {
+    if (fontColorInputRef.current) {
+      fontColorInputRef.current.click();
+    }
+  };
+
+  const handleCustomFontColorChange = (e) => {
+    handleFontColorChange(e.target.value);
+  };
+
   const handleCustomColorPicker = () => {
     if (colorInputRef.current) {
       colorInputRef.current.click();
@@ -108,6 +141,12 @@ const SettingsWindow = () => {
 
   const handleAutoHideChange = (e) => {
     const newSettings = { ...settings, autoHideInImmersive: e.target.checked };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  const handleScrollSpeedChange = (e) => {
+    const newSettings = { ...settings, scrollSpeed: parseFloat(e.target.value) };
     setSettings(newSettings);
     saveSettings(newSettings);
   };
@@ -231,6 +270,59 @@ const SettingsWindow = () => {
           />
         </div>
 
+        {/* 字体颜色 */}
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            字体颜色
+          </label>
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="autoFontColor"
+              checked={settings.autoFontColor}
+              onChange={handleAutoFontColorToggle}
+              className="mr-2"
+            />
+            <label htmlFor="autoFontColor" className="text-sm text-gray-600">
+              自动适配背景色
+            </label>
+          </div>
+          {!settings.autoFontColor && (
+            <>
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {presetFontColors.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => handleFontColorChange(color.value)}
+                    className={`h-10 rounded border-2 transition-all flex items-center justify-center ${
+                      settings.fontColor === color.value
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    style={{ backgroundColor: '#f0f0f0' }}
+                    title={color.name}
+                  >
+                    <span style={{ color: color.value, fontWeight: 'bold', fontSize: '18px' }}>A</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleCustomFontColorPicker}
+                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded border border-gray-300 transition-colors"
+              >
+                自定义颜色
+              </button>
+              <input
+                ref={fontColorInputRef}
+                type="color"
+                value={settings.fontColor}
+                onChange={handleCustomFontColorChange}
+                className="hidden"
+              />
+            </>
+          )}
+        </div>
+
         {/* 字体大小 */}
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -276,6 +368,25 @@ const SettingsWindow = () => {
             onChange={handlePaddingChange}
             className="w-full"
           />
+        </div>
+
+        {/* 滚动速度 */}
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            滚动速度: {settings.scrollSpeed}x
+          </label>
+          <input
+            type="range"
+            min="0.1"
+            max="3"
+            step="0.1"
+            value={settings.scrollSpeed}
+            onChange={handleScrollSpeedChange}
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            调整鼠标滚轮和键盘滚动的速度
+          </p>
         </div>
 
         {/* 沉浸模式行数 */}

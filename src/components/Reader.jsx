@@ -127,9 +127,13 @@ const Reader = () => {
     root.style.setProperty('--font-size', `${settings.fontSize}px`);
     root.style.setProperty('--line-height', settings.lineHeight);
 
-    // 根据背景颜色自动调整文字颜色
-    const isDark = isColorDark(settings.backgroundColor);
-    root.style.setProperty('--text-color', isDark ? '#e0e0e0' : '#333333');
+    // 根据设置决定文字颜色
+    if (settings.autoFontColor) {
+      const isDark = isColorDark(settings.backgroundColor);
+      root.style.setProperty('--text-color', isDark ? '#e0e0e0' : '#333333');
+    } else {
+      root.style.setProperty('--text-color', settings.fontColor || '#333333');
+    }
   }, [settings]);
 
   // 更新列表高度和宽度
@@ -144,6 +148,23 @@ const Reader = () => {
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, [isImmersiveMode]);
+
+  // 自定义滚动速度
+  useEffect(() => {
+    const listElement = listRef.current?._outerRef;
+    if (!listElement) return;
+
+    const scrollSpeed = settings.scrollSpeed || 1;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY * scrollSpeed;
+      listElement.scrollTop += delta;
+    };
+
+    listElement.addEventListener('wheel', handleWheel, { passive: false });
+    return () => listElement.removeEventListener('wheel', handleWheel);
+  }, [settings.scrollSpeed]);
 
   const isColorDark = (color) => {
     const hex = color.replace('#', '');

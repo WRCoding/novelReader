@@ -10,6 +10,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
   const updateShortcut = useStore((state) => state.updateShortcut);
   const saveToLocal = useStore((state) => state.saveToLocal);
   const colorInputRef = useRef(null);
+  const fontColorInputRef = useRef(null);
   const [savingWindowSize, setSavingWindowSize] = useState(false);
   const [windowSizeSaved, setWindowSizeSaved] = useState(false);
   const [recordingShortcut, setRecordingShortcut] = useState(null);
@@ -21,9 +22,38 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     { name: '深色', value: '#1e1e1e' },
   ];
 
+  const presetFontColors = [
+    { name: '深灰', value: '#333333' },
+    { name: '纯黑', value: '#000000' },
+    { name: '浅灰', value: '#e0e0e0' },
+    { name: '米白', value: '#f5f5dc' },
+  ];
+
   const handleBackgroundColorChange = (color) => {
     updateSettings({ backgroundColor: color });
     applyStyles({ backgroundColor: color });
+  };
+
+  const handleFontColorChange = (color) => {
+    updateSettings({ fontColor: color, autoFontColor: false });
+    applyStyles({ fontColor: color, autoFontColor: false });
+  };
+
+  const handleAutoFontColorToggle = () => {
+    const newAutoFontColor = !settings.autoFontColor;
+    updateSettings({ autoFontColor: newAutoFontColor });
+    applyStyles({ autoFontColor: newAutoFontColor });
+  };
+
+  const handleCustomFontColorPicker = () => {
+    if (fontColorInputRef.current) {
+      fontColorInputRef.current.click();
+    }
+  };
+
+  const handleCustomFontColorChange = (e) => {
+    const color = e.target.value;
+    handleFontColorChange(color);
   };
 
   const handleCustomColorPicker = () => {
@@ -83,9 +113,13 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     root.style.setProperty('--font-size', `${mergedSettings.fontSize}px`);
     root.style.setProperty('--line-height', mergedSettings.lineHeight);
 
-    // 根据背景颜色自动调整文字颜色
-    const isDark = isColorDark(mergedSettings.backgroundColor);
-    root.style.setProperty('--text-color', isDark ? '#e0e0e0' : '#333333');
+    // 根据设置决定文字颜色
+    if (mergedSettings.autoFontColor) {
+      const isDark = isColorDark(mergedSettings.backgroundColor);
+      root.style.setProperty('--text-color', isDark ? '#e0e0e0' : '#333333');
+    } else {
+      root.style.setProperty('--text-color', mergedSettings.fontColor);
+    }
   };
 
   const isColorDark = (color) => {
@@ -160,7 +194,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
       />
 
       {/* 设置面板 - 固定尺寸，不受窗口大小影响 */}
-      <div className="relative bg-white rounded-lg shadow-2xl border border-gray-200 p-5 z-10 w-[360px] h-[500px] overflow-y-auto">
+      <div className="relative bg-white rounded-lg shadow-2xl border border-gray-200 p-5 z-10 w-[360px] max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-800">阅读设置</h3>
           <button
@@ -206,6 +240,59 @@ const SettingsPanel = ({ isOpen, onClose }) => {
           onChange={handleCustomColorChange}
           className="hidden"
         />
+      </div>
+
+      {/* 字体颜色 */}
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          字体颜色
+        </label>
+        <div className="flex items-center mb-2">
+          <input
+            type="checkbox"
+            id="autoFontColor"
+            checked={settings.autoFontColor}
+            onChange={handleAutoFontColorToggle}
+            className="mr-2"
+          />
+          <label htmlFor="autoFontColor" className="text-sm text-gray-600">
+            自动适配背景色
+          </label>
+        </div>
+        {!settings.autoFontColor && (
+          <>
+            <div className="grid grid-cols-4 gap-2 mb-2">
+              {presetFontColors.map((color) => (
+                <button
+                  key={color.value}
+                  onClick={() => handleFontColorChange(color.value)}
+                  className={`h-10 rounded border-2 transition-all flex items-center justify-center ${
+                    settings.fontColor === color.value
+                      ? 'border-blue-500 ring-2 ring-blue-200'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  style={{ backgroundColor: '#f0f0f0' }}
+                  title={color.name}
+                >
+                  <span style={{ color: color.value, fontWeight: 'bold' }}>A</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleCustomFontColorPicker}
+              className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded border border-gray-300 transition-colors"
+            >
+              自定义颜色
+            </button>
+            <input
+              ref={fontColorInputRef}
+              type="color"
+              value={settings.fontColor}
+              onChange={handleCustomFontColorChange}
+              className="hidden"
+            />
+          </>
+        )}
       </div>
 
       {/* 字体大小 */}

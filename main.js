@@ -1,10 +1,13 @@
 const { app, BrowserWindow, ipcMain, dialog, screen, nativeImage, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const chardet = require('chardet');
+const iconv = require('iconv-lite');
 
 let mainWindow;
 let settingsWindow = null;
 let tray = null;
+let mouseCheckInterval = null;
 
 // 获取保存的窗口大小
 function getSavedWindowSize() {
@@ -191,11 +194,25 @@ ipcMain.handle('open-file-dialog', async () => {
   return result.filePaths[0];
 });
 
-// 读取文件内容
+// 读取文件内容（自动检测编码）
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return { success: true, content };
+    // 读取原始二进制数据
+    const buffer = fs.readFileSync(filePath);
+
+    // 检测文件编码
+    const detectedEncoding = chardet.detect(buffer);
+    const encoding = detectedEncoding || 'utf-8';
+
+    // 使用检测到的编码解码文件内容
+    let content;
+    if (encoding.toLowerCase() === 'utf-8' || encoding.toLowerCase() === 'utf8') {
+      content = buffer.toString('utf-8');
+    } else {
+      content = iconv.decode(buffer, encoding);
+    }
+
+    return { success: true, content, encoding };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -359,5 +376,37 @@ ipcMain.on('settings-updated', () => {
 ipcMain.on('set-window-opacity', (event, opacity) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setOpacity(opacity);
+  }
+});
+
+// 启动鼠标位置检测（用于沉浸模式自动隐藏，解决 Windows 兼容性问题）
+ipcMain.on('start-mouse-tracking', () => {
+  if (mouseCheckInterval) return;
+
+  mouseCheckInterval = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    const mousePos = screen.getCursorScreenPoint();
+    const winBounds = mainWindow.getBounds();
+
+    const isInsideWindow =
+      mousePos.x >= winBounds.x &&
+      mousePos.x <= winBounds.x + winBounds.width &&
+      mousePos.y >= winBounds.y &&
+      mousePos.y <= winBounds.y + winBounds.height;
+
+    mainWindow.webContents.send('mouse-position-changed', isInsideWindow);
+  }, 100);
+});
+
+// 停止鼠标位置检测
+ipcMain.on('stop-mouse-tracking', () => {
+  if (mouseCheckInterval) {
+    clearInterval(mouseCheckInterval);
+    mouseCheckInterval = null;
+  }
+  // 确保窗口可见
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setOpacity(1);
   }
 });

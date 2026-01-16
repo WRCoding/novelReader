@@ -15,12 +15,15 @@ const useStore = create((set, get) => ({
   // 阅读样式设置
   settings: {
     backgroundColor: '#ffffff',
+    fontColor: '#333333', // 字体颜色
+    autoFontColor: true, // 是否自动根据背景色调整字体颜色
     fontSize: 18,
     lineHeight: 1.8,
     padding: 16, // 左右内边距
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
     linesPerScreen: 20, // 沉浸式模式每屏显示行数
     autoHideInImmersive: true, // 沉浸模式下自动隐藏窗口
+    scrollSpeed: 1, // 滚动速度倍率 (0.5-3)
   },
 
   // 沉浸式模式
