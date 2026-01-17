@@ -27,12 +27,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 设置窗口
   openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
   closeSettingsWindow: () => ipcRenderer.send('close-settings-window'),
+  hideSettingsWindow: () => ipcRenderer.send('hide-settings-window'),
+  showSettingsWindow: () => ipcRenderer.send('show-settings-window'),
   notifySettingsUpdated: () => ipcRenderer.send('settings-updated'),
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', () => callback()),
   onSettingsWindowClosed: (callback) => ipcRenderer.on('settings-window-closed', () => callback()),
 
   // 窗口透明度
   setWindowOpacity: (opacity) => ipcRenderer.send('set-window-opacity', opacity),
+
+  // 取色器
+  openColorPicker: () => ipcRenderer.invoke('open-color-picker'),
+  onColorPickerResult: (callback) => ipcRenderer.on('color-picker-result', (_, result) => callback(result)),
+  removeColorPickerListener: () => ipcRenderer.removeAllListeners('color-picker-result'),
 
   // 鼠标位置追踪（用于沉浸模式自动隐藏）
   startMouseTracking: () => ipcRenderer.send('start-mouse-tracking'),

@@ -1,11 +1,13 @@
-const { app, BrowserWindow, ipcMain, dialog, screen, nativeImage, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, nativeImage, Tray, Menu, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const chardet = require('chardet');
 const iconv = require('iconv-lite');
 
 let mainWindow;
 let settingsWindow = null;
+let colorPickerWindow = null;
 let tray = null;
 let mouseCheckInterval = null;
 
@@ -48,7 +50,6 @@ function createWindow(show = true) {
       nodeIntegration: false
     }
   });
-
   mainWindow.loadFile('index.html');
 
   // 窗口准备好后再显示
@@ -365,6 +366,21 @@ ipcMain.on('close-settings-window', () => {
   }
 });
 
+// 隐藏设置窗口（用于取色）
+ipcMain.on('hide-settings-window', () => {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.hide();
+  }
+});
+
+// 显示设置窗口（取色完成后恢复）
+ipcMain.on('show-settings-window', () => {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.show();
+    settingsWindow.focus();
+  }
+});
+
 // 通知主窗口设置已更新
 ipcMain.on('settings-updated', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -408,5 +424,115 @@ ipcMain.on('stop-mouse-tracking', () => {
   // 确保窗口可见
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setOpacity(1);
+  }
+});
+
+// 取色器功能
+let screenshotTempPath = null;
+
+// 打开取色器
+ipcMain.handle('open-color-picker', async () => {
+  try {
+    // 先隐藏设置窗口
+    // if (settingsWindow && !settingsWindow.isDestroyed()) {
+    //   settingsWindow.hide();
+    // }
+
+    // 等待窗口完全隐藏
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // 获取主显示器
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.size;
+    const scaleFactor = primaryDisplay.scaleFactor;
+
+    // 截取屏幕
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width: Math.floor(width * scaleFactor),
+        height: Math.floor(height * scaleFactor)
+      }
+    });
+
+    if (sources.length === 0) {
+      if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.show();
+      }
+      return { success: false, error: '无法获取屏幕截图' };
+    }
+
+    // 获取第一个屏幕源
+    const source = sources[0];
+    const screenshot = source.thumbnail;
+
+    // 转换为 base64 data URL
+    const dataUrl = screenshot.toDataURL();
+
+    // 创建全屏取色窗口
+    colorPickerWindow = new BrowserWindow({
+      x: primaryDisplay.bounds.x,
+      y: primaryDisplay.bounds.y,
+      width: width,
+      height: height,
+      frame: false,
+      transparent: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      movable: false,
+      fullscreen: true,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    });
+    colorPickerWindow.webContents.openDevTools({ mode: 'detach' });
+    colorPickerWindow.loadFile('colorpicker.html');
+
+    colorPickerWindow.webContents.once('did-finish-load', () => {
+      colorPickerWindow.webContents.send('screenshot-ready', {
+        dataUrl: dataUrl,
+        scaleFactor: scaleFactor
+      });
+    });
+
+    colorPickerWindow.on('closed', () => {
+      colorPickerWindow = null;
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('打开取色器失败:', error);
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.show();
+    }
+    return { success: false, error: error.message };
+  }
+});
+
+// 取色完成
+ipcMain.on('color-picked', (event, color) => {
+  if (colorPickerWindow && !colorPickerWindow.isDestroyed()) {
+    colorPickerWindow.close();
+  }
+  // 通知设置窗口颜色已选择
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    // settingsWindow.show();
+    settingsWindow.webContents.send('color-picker-result', { success: true, color });
+    settingsWindow.focus();
+  }
+});
+
+// 取色取消
+ipcMain.on('color-picker-cancelled', () => {
+  if (colorPickerWindow && !colorPickerWindow.isDestroyed()) {
+    colorPickerWindow.close();
+  }
+  // 通知设置窗口取色已取消
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    // settingsWindow.show();
+    settingsWindow.webContents.send('color-picker-result', { success: false, cancelled: true });
+    settingsWindow.focus();
   }
 });

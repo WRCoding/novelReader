@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>取色器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    #screenshot {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* object-fit: cover; */
+    }
+
+    #magnifier {
+      position: fixed;
+      width: 120px;
+      height: 120px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      overflow: hidden;
+      display: none;
+      z-index: 1000;
+    }
+
+    #magnifier-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    #color-info {
+      position: fixed;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      pointer-events: none;
+      display: none;
+      z-index: 1001;
+    }
+
+    #crosshair {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      background: transparent;
+      pointer-events: none;
+      z-index: 1002;
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: #fff;
+      mix-blend-mode: difference;
+    }
+
+    #crosshair::before {
+      width: 1px;
+      height: 20px;
+      left: 0;
+      top: -10px;
+    }
+
+    #crosshair::after {
+      width: 20px;
+      height: 1px;
+      left: -10px;
+      top: 0;
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 1003;
+    }
+  </style>
+</head>
+
+<body>
+  <img id="screenshot" />
+  <div id="magnifier">
+    <canvas id="magnifier-canvas" width="120" height="120"></canvas>
+  </div>
+  <div id="color-info"></div>
+  <div id="crosshair"></div>
+  <div id="hint">点击选择颜色，按 ESC 取消</div>
+  <canvas id="hidden-canvas" style="display: none;"></canvas>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const screenshot = document.getElementById('screenshot');
+    const magnifier = document.getElementById('magnifier');
+    const magnifierCanvas = document.getElementById('magnifier-canvas');
+    const colorInfo = document.getElementById('color-info');
+    const crosshair = document.getElementById('crosshair');
+    const hiddenCanvas = document.getElementById('hidden-canvas');
+    const hint = document.getElementById('hint');
+
+    const magnifierCtx = magnifierCanvas.getContext('2d');
+    const hiddenCtx = hiddenCanvas.getContext('2d');
+
+    let imageLoaded = false;
+    let scaleFactor = 1;
+
+    // 接收截图数据
+    ipcRenderer.on('screenshot-ready', (event, data) => {
+      console.log('收到截图数据，长度:', data.dataUrl ? data.dataUrl.length : 0);
+      screenshot.src = data.dataUrl;
+      scaleFactor = data.scaleFactor || 1;
+    });
+
+    screenshot.onload = () => {
+      console.log('截图加载成功:', screenshot.naturalWidth, 'x', screenshot.naturalHeight);
+      imageLoaded = true;
+      hiddenCanvas.width = screenshot.naturalWidth;
+      hiddenCanvas.height = screenshot.naturalHeight;
+      hiddenCtx.drawImage(screenshot, 0, 0);
+      magnifier.style.display = 'block';
+      colorInfo.style.display = 'block';
+    };
+
+    screenshot.onerror = (err) => {
+      console.error('截图加载失败:', err);
+      alert('截图加载失败，请重试');
+      ipcRenderer.send('color-picker-cancelled');
+    };
+
+    document.addEventListener('mousemove', (e) => {
+      if (!imageLoaded) return;
+
+      const x = e.clientX;
+      const y = e.clientY;
+
+      // 更新十字准星位置
+      crosshair.style.left = x + 'px';
+      crosshair.style.top = y + 'px';
+
+      // 更新放大镜位置（偏移避免遮挡鼠标）
+      let magX = x + 20;
+      let magY = y + 20;
+
+      // 确保放大镜不超出屏幕
+      if (magX + 130 > window.innerWidth) {
+        magX = x - 140;
+      }
+      if (magY + 160 > window.innerHeight) {
+        magY = y - 160;
+      }
+
+      magnifier.style.left = magX + 'px';
+      magnifier.style.top = magY + 'px';
+
+      // 获取像素颜色（动态计算缩放比例，确保坐标与显示图像对齐）
+      const scaleX = hiddenCanvas.width / window.innerWidth;
+      const scaleY = hiddenCanvas.height / window.innerHeight;
+      const imgX = Math.floor(x * scaleX);
+      const imgY = Math.floor(y * scaleY);
+
+      // 绘制放大镜内容
+      const sourceSize = 15; // 采样区域大小 (改为奇数，确保有中心像素，120/15=8倍放大)
+      const offset = Math.floor(sourceSize / 2);
+
+      magnifierCtx.imageSmoothingEnabled = false;
+      magnifierCtx.clearRect(0, 0, 120, 120);
+
+      // 从原图采样并放大绘制到放大镜
+      magnifierCtx.drawImage(
+        hiddenCanvas,
+        imgX - offset,
+        imgY - offset,
+        sourceSize,
+        sourceSize,
+        0,
+        0,
+        120,
+        120
+      );
+
+      // 绘制中心十字线
+      magnifierCtx.strokeStyle = 'rgba(255,255,255,0.8)';
+      magnifierCtx.lineWidth = 1;
+      magnifierCtx.beginPath();
+      magnifierCtx.moveTo(60, 0);
+      magnifierCtx.lineTo(60, 120);
+      magnifierCtx.moveTo(0, 60);
+      magnifierCtx.lineTo(120, 60);
+      magnifierCtx.stroke();
+
+      // 绘制中心像素边框
+      const pixelSize = 120 / sourceSize;
+      magnifierCtx.strokeStyle = '#fff';
+      magnifierCtx.lineWidth = 2;
+      magnifierCtx.strokeRect(
+        (120 - pixelSize) / 2,
+        (120 - pixelSize) / 2,
+        pixelSize,
+        pixelSize
+      );
+
+      // 获取当前像素颜色
+      try {
+        const pixel = hiddenCtx.getImageData(imgX, imgY, 1, 1).data;
+        const hex = '#' +
+          pixel[0].toString(16).padStart(2, '0') +
+          pixel[1].toString(16).padStart(2, '0') +
+          pixel[2].toString(16).padStart(2, '0');
+
+        colorInfo.textContent = hex.toUpperCase();
+        colorInfo.style.backgroundColor = hex;
+        colorInfo.style.color = (pixel[0] * 0.299 + pixel[1] * 0.587 + pixel[2] * 0.114) > 128 ? '#000' : '#fff';
+
+        // 颜色信息显示在放大镜下方
+        colorInfo.style.left = magX + 'px';
+        colorInfo.style.top = (magnifier.offsetTop + 130) + 'px';
+
+        // 存储当前颜色
+        colorInfo.dataset.color = hex;
+      } catch (err) {
+        console.error('获取像素失败:', err);
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!imageLoaded) return;
+
+      const color = colorInfo.dataset.color;
+      if (color) {
+        ipcRenderer.send('color-picked', color);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        ipcRenderer.send('color-picker-cancelled');
+      }
+    });
+
+    // 隐藏提示
+    setTimeout(() => {
+      hint.style.opacity = '0';
+      hint.style.transition = 'opacity 0.5s';
+      setTimeout(() => hint.style.display = 'none', 500);
+    }, 2000);
+  </script>
+</body>
+
+</html>

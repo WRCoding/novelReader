@@ -20,6 +20,7 @@ const SettingsWindow = () => {
   const [savingWindowSize, setSavingWindowSize] = useState(false);
   const [windowSizeSaved, setWindowSizeSaved] = useState(false);
   const [isMac, setIsMac] = useState(false);
+  const [pickingColorType, setPickingColorType] = useState(null);
   const colorInputRef = useRef(null);
   const fontColorInputRef = useRef(null);
 
@@ -41,6 +42,28 @@ const SettingsWindow = () => {
     setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
     loadSettings();
   }, []);
+
+  // 监听取色器结果
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleColorPickerResult = (result) => {
+      if (result.success && result.color && pickingColorType) {
+        if (pickingColorType === 'bg') {
+          handleBackgroundColorChange(result.color);
+        } else if (pickingColorType === 'font') {
+          handleFontColorChange(result.color);
+        }
+      }
+      setPickingColorType(null);
+    };
+
+    window.electronAPI.onColorPickerResult(handleColorPickerResult);
+
+    return () => {
+      window.electronAPI.removeColorPickerListener();
+    };
+  }, [pickingColorType, settings]);
 
   const loadSettings = async () => {
     if (!window.electronAPI) return;
@@ -114,6 +137,12 @@ const SettingsWindow = () => {
 
   const handleCustomColorChange = (e) => {
     handleBackgroundColorChange(e.target.value);
+  };
+
+  const handleColorPicker = async (type) => {
+    if (!window.electronAPI) return;
+    setPickingColorType(type);
+    await window.electronAPI.openColorPicker();
   };
 
   const handleFontSizeChange = (e) => {
@@ -283,6 +312,14 @@ const SettingsWindow = () => {
               placeholder="#ffffff"
               className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
+            <button
+              onClick={() => handleColorPicker('bg')}
+              disabled={pickingColorType !== null}
+              className="px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap disabled:opacity-50"
+              title="从屏幕取色"
+            >
+              取色
+            </button>
           </div>
           <p className="text-xs text-gray-500 mt-1">
             可直接输入十六进制颜色值（如 #f4ecd8）
@@ -352,6 +389,14 @@ const SettingsWindow = () => {
                   placeholder="#333333"
                   className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 />
+                <button
+                  onClick={() => handleColorPicker('font')}
+                  disabled={pickingColorType !== null}
+                  className="px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap disabled:opacity-50"
+                  title="从屏幕取色"
+                >
+                  取色
+                </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 可直接输入十六进制颜色值
