@@ -39,8 +39,8 @@ function createWindow(show = true) {
     transparent: false,
     backgroundColor: '#f3f4f6',
     resizable: true,
-    minWidth: 300,
-    minHeight: 50,
+    // minWidth: 300,
+    // minHeight: 50,
     show: show,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

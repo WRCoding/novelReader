@@ -24,6 +24,7 @@ const useStore = create((set, get) => ({
     linesPerScreen: 20, // 沉浸式模式每屏显示行数
     autoHideInImmersive: true, // 沉浸模式下自动隐藏窗口
     scrollSpeed: 1, // 滚动速度倍率 (0.5-3)
+    showScrollbarInImmersive: false, // 沉浸模式下是否显示滚动条
   },
 
   // 沉浸式模式

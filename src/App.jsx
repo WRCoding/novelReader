@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import TitleBar from './components/TitleBar';
 import FileImport from './components/FileImport';
 import Reader from './components/Reader';
@@ -21,6 +21,7 @@ function App() {
   const hasStartedReading = useStore((state) => state.hasStartedReading);
 
   const hideTimeoutRef = useRef(null);
+  const [isDraggingHandle, setIsDraggingHandle] = useState(false);
 
   // 自动隐藏窗口逻辑（使用主进程鼠标位置检测，解决 Windows 兼容性问题）
   useEffect(() => {
@@ -190,7 +191,7 @@ function App() {
         isImmersive={isImmersiveMode}
       />
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className={`flex-1 relative overflow-hidden ${isDraggingHandle ? 'pointer-events-none' : ''}`}>
         {!content ? (
           <FileImport />
         ) : (
@@ -198,12 +199,17 @@ function App() {
         )}
       </div>
 
-      {/* 沉浸模式下的拖拽区域 */}
+      {/* 沉浸模式下的拖拽手柄 - 小巧的居中设计，不影响滚动 */}
       {isImmersiveMode && (
         <div
-          className="fixed top-0 left-0 right-0 h-6 z-50 cursor-move"
+          className="fixed top-1 left-1/2 -translate-x-1/2 z-50 cursor-move px-4 py-1 rounded-full bg-gray-400/20 hover:bg-gray-400/40 transition-all opacity-30 hover:opacity-100"
           style={{ WebkitAppRegion: 'drag' }}
-        />
+          title="拖动移动窗口"
+          onMouseEnter={() => setIsDraggingHandle(true)}
+          onMouseLeave={() => setIsDraggingHandle(false)}
+        >
+          <div className="w-8 h-1 bg-gray-500/50 rounded-full pointer-events-none"></div>
+        </div>
       )}
     </div>
   );

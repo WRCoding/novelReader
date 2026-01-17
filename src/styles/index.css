@@ -4,11 +4,15 @@
 
 /* CSS 变量用于动态样式 */
 :root {
-  --bg-color: #ffffff;
-  --text-color: #333333;
+  --bg-color: #f8fafc;
+  /* 更现代的灰白色背景 */
+  --text-color: #1e293b;
+  /*  slate-800 */
+  --primary-color: #3b82f6;
   --font-size: 18px;
   --line-height: 1.8;
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  /* 现代字体栈 */
+  --font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 body {
@@ -18,30 +22,57 @@ body {
   line-height: var(--line-height);
   font-family: var(--font-family);
   transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  /* macOS 字体平滑 */
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 正常模式的滚动条 */
+/* 玻璃拟态工具类 */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 正常模式的滚动条 - 更纤细优雅，远离边缘避免与窗口调整冲突 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  /* 增加宽度以容纳边距 */
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: transparent;
+  margin-right: 4px;
+  /* 轨道右边距 */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  /* 透明边框创建视觉间距 */
+  background-clip: padding-box;
+  /* 确保背景不填充边框区域 */
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(148, 163, 184, 0.6);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 /* 用户选择文本样式 */
 .reader-text::selection {
-  background: rgba(100, 149, 237, 0.3);
+  background: rgba(59, 130, 246, 0.2);
+  color: inherit;
 }
 
 /* 平滑滚动 */
@@ -69,14 +100,29 @@ body {
 }
 
 /* 隐藏 react-window 内部滚动容器的滚动条（沉浸模式） */
-.immersive-reader > div::-webkit-scrollbar {
+.immersive-reader>div::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
   display: none !important;
 }
 
-.immersive-reader > div {
+.immersive-reader>div {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
   overflow: auto !important;
+}
+
+/* 动画工具 */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }

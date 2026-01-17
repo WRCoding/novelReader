@@ -13,6 +13,7 @@ const SettingsWindow = () => {
     padding: 16,
     autoHideInImmersive: true,
     scrollSpeed: 1,
+    showScrollbarInImmersive: false,
   });
   const [shortcuts, setShortcuts] = useState({});
   const [recordingShortcut, setRecordingShortcut] = useState(null);
@@ -245,29 +246,47 @@ const SettingsWindow = () => {
               <button
                 key={color.value}
                 onClick={() => handleBackgroundColorChange(color.value)}
-                className={`h-10 rounded border-2 transition-all ${
-                  settings.backgroundColor === color.value
-                    ? 'border-blue-500 ring-2 ring-blue-200'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
+                className={`h-10 rounded border-2 transition-all ${settings.backgroundColor === color.value
+                  ? 'border-blue-500 ring-2 ring-blue-200'
+                  : 'border-gray-300 hover:border-gray-400'
+                  }`}
                 style={{ backgroundColor: color.value }}
                 title={color.name}
               />
             ))}
           </div>
-          <button
-            onClick={handleCustomColorPicker}
-            className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded border border-gray-300 transition-colors"
-          >
-            自定义颜色
-          </button>
-          <input
-            ref={colorInputRef}
-            type="color"
-            value={settings.backgroundColor}
-            onChange={handleCustomColorChange}
-            className="hidden"
-          />
+          {/* 自定义颜色：颜色选择器 + 十六进制输入框 */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={settings.backgroundColor}
+              onChange={handleCustomColorChange}
+              className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+              title="点击选择颜色"
+            />
+            <input
+              type="text"
+              value={settings.backgroundColor}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                  handleBackgroundColorChange(value || '#ffffff');
+                }
+              }}
+              onBlur={(e) => {
+                // 确保是有效的颜色值
+                if (!/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                  handleBackgroundColorChange('#ffffff');
+                }
+              }}
+              placeholder="#ffffff"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            可直接输入十六进制颜色值（如 #f4ecd8）
+          </p>
         </div>
 
         {/* 字体颜色 */}
@@ -294,11 +313,10 @@ const SettingsWindow = () => {
                   <button
                     key={color.value}
                     onClick={() => handleFontColorChange(color.value)}
-                    className={`h-10 rounded border-2 transition-all flex items-center justify-center ${
-                      settings.fontColor === color.value
-                        ? 'border-blue-500 ring-2 ring-blue-200'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                    className={`h-10 rounded border-2 transition-all flex items-center justify-center ${settings.fontColor === color.value
+                      ? 'border-blue-500 ring-2 ring-blue-200'
+                      : 'border-gray-300 hover:border-gray-400'
+                      }`}
                     style={{ backgroundColor: '#f0f0f0' }}
                     title={color.name}
                   >
@@ -306,19 +324,38 @@ const SettingsWindow = () => {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={handleCustomFontColorPicker}
-                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded border border-gray-300 transition-colors"
-              >
-                自定义颜色
-              </button>
-              <input
-                ref={fontColorInputRef}
-                type="color"
-                value={settings.fontColor}
-                onChange={handleCustomFontColorChange}
-                className="hidden"
-              />
+              {/* 自定义字体颜色：颜色选择器 + 十六进制输入框 */}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fontColorInputRef}
+                  type="color"
+                  value={settings.fontColor}
+                  onChange={handleCustomFontColorChange}
+                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                  title="点击选择颜色"
+                />
+                <input
+                  type="text"
+                  value={settings.fontColor}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                      handleFontColorChange(value || '#333333');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // 确保是有效的颜色值
+                    if (!/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                      handleFontColorChange('#333333');
+                    }
+                  }}
+                  placeholder="#333333"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                可直接输入十六进制颜色值
+              </p>
             </>
           )}
         </div>
@@ -418,17 +455,42 @@ const SettingsWindow = () => {
                 onChange={handleAutoHideChange}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 rounded-full transition-colors ${
-                settings.autoHideInImmersive ? 'bg-blue-500' : 'bg-gray-300'
-              }`}>
-                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                  settings.autoHideInImmersive ? 'translate-x-5' : 'translate-x-1'
-                }`} />
+              <div className={`w-10 h-6 rounded-full transition-colors ${settings.autoHideInImmersive ? 'bg-blue-500' : 'bg-gray-300'
+                }`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings.autoHideInImmersive ? 'translate-x-5' : 'translate-x-1'
+                  }`} />
               </div>
             </div>
           </label>
           <p className="text-xs text-gray-500 mt-1">
             开启后，阅读时鼠标移出窗口会自动隐藏
+          </p>
+        </div>
+
+        {/* 沉浸模式显示滚动条 */}
+        <div className="mb-5">
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm font-medium text-gray-700">沉浸模式显示滚动条</span>
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={settings.showScrollbarInImmersive}
+                onChange={(e) => {
+                  const newSettings = { ...settings, showScrollbarInImmersive: e.target.checked };
+                  setSettings(newSettings);
+                  saveSettings(newSettings);
+                }}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 rounded-full transition-colors ${settings.showScrollbarInImmersive ? 'bg-blue-500' : 'bg-gray-300'
+                }`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings.showScrollbarInImmersive ? 'translate-x-5' : 'translate-x-1'
+                  }`} />
+              </div>
+            </div>
+          </label>
+          <p className="text-xs text-gray-500 mt-1">
+            开启后，沉浸模式下也会显示滚动条
           </p>
         </div>
 
@@ -440,11 +502,10 @@ const SettingsWindow = () => {
           <button
             onClick={handleSaveWindowSize}
             disabled={savingWindowSize}
-            className={`w-full px-3 py-2 text-sm rounded border transition-colors ${
-              windowSizeSaved
-                ? 'bg-green-500 text-white border-green-500'
-                : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
-            }`}
+            className={`w-full px-3 py-2 text-sm rounded border transition-colors ${windowSizeSaved
+              ? 'bg-green-500 text-white border-green-500'
+              : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
+              }`}
           >
             {savingWindowSize ? '保存中...' : windowSizeSaved ? '已保存' : '保存当前窗口大小'}
           </button>
@@ -466,11 +527,10 @@ const SettingsWindow = () => {
                   onClick={() => startRecording(action)}
                   onKeyDown={(e) => handleKeyDown(e, action)}
                   onBlur={cancelRecording}
-                  className={`px-3 py-1 text-sm rounded border transition-colors min-w-[100px] text-center ${
-                    recordingShortcut === action
-                      ? 'bg-blue-100 border-blue-500 text-blue-700'
-                      : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
-                  }`}
+                  className={`px-3 py-1 text-sm rounded border transition-colors min-w-[100px] text-center ${recordingShortcut === action
+                    ? 'bg-blue-100 border-blue-500 text-blue-700'
+                    : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
+                    }`}
                 >
                   {recordingShortcut === action ? '按下快捷键...' : formatShortcut(shortcut)}
                 </button>

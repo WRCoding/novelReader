@@ -17,7 +17,6 @@ const Reader = () => {
   const containerRef = useRef(null);
   const listRef = useRef(null);
   const saveTimeoutRef = useRef(null);
-  const measureRef = useRef(null);
   const initialScrollRef = useRef(true); // 标记是否是初始滚动恢复
   const [listHeight, setListHeight] = useState(window.innerHeight - 48);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
@@ -35,9 +34,11 @@ const Reader = () => {
     const paragraph = paragraphs[index];
     if (!paragraph) return settings.fontSize * settings.lineHeight;
 
-    // 可用宽度（减去左右padding）
-    const padding = settings.padding || 16;
-    const availableWidth = containerWidth - (padding * 2);
+    // 限制内容的最大宽度，保持与渲染时一致
+    const padding = settings.padding || 32;
+    // 假设最大阅读宽度为 800px (max-w-3xl 约为 768px, 这里放宽一点)
+    const maxContentWidth = 800;
+    const availableWidth = Math.min(containerWidth, maxContentWidth) - (padding * 2);
 
     // 每个字符的大致宽度（中文字符约等于fontSize）
     const charWidth = settings.fontSize;
@@ -52,7 +53,7 @@ const Reader = () => {
     const lineHeightPx = settings.fontSize * settings.lineHeight;
 
     // 总高度 = 行数 * 行高 + 段落间距
-    return Math.max(lines * lineHeightPx, lineHeightPx) + 8; // 8px段落间距
+    return Math.max(lines * lineHeightPx, lineHeightPx) + settings.fontSize; // 段落间距设为字体大小
   }, [paragraphs, settings.fontSize, settings.lineHeight, settings.padding, containerWidth]);
 
   // 计算总高度
@@ -130,16 +131,17 @@ const Reader = () => {
     // 根据设置决定文字颜色
     if (settings.autoFontColor) {
       const isDark = isColorDark(settings.backgroundColor);
-      root.style.setProperty('--text-color', isDark ? '#e0e0e0' : '#333333');
+      root.style.setProperty('--text-color', isDark ? '#e2e8f0' : '#1e293b'); // 使用更现代的 slate 颜色
     } else {
-      root.style.setProperty('--text-color', settings.fontColor || '#333333');
+      root.style.setProperty('--text-color', settings.fontColor || '#1e293b');
     }
   }, [settings]);
 
   // 更新列表高度和宽度
   useEffect(() => {
     const updateDimensions = () => {
-      const height = window.innerHeight - (isImmersiveMode ? 0 : 48);
+      // TitleBar 高度现在是 3.5rem (56px)
+      const height = window.innerHeight - (isImmersiveMode ? 0 : 56);
       setListHeight(height);
       setContainerWidth(window.innerWidth);
     };
@@ -179,22 +181,29 @@ const Reader = () => {
   const Row = ({ index, style }) => {
     const paragraph = paragraphs[index];
     const isChapterTitle = paragraph && paragraph.match(/^第.+章/);
-    const padding = settings.padding || 16;
+    const padding = settings.padding || 32;
 
     return (
-      <div style={style} className="reader-text">
-        <p
-          className={`${isChapterTitle ? 'font-semibold text-center' : 'indent-8'}`}
+      <div style={style} className="reader-text flex justify-center">
+        <div
+          className="w-full max-w-[800px]"
           style={{
-            fontSize: `${settings.fontSize}px`,
-            lineHeight: settings.lineHeight,
-            wordBreak: 'break-all',
             paddingLeft: `${padding}px`,
             paddingRight: `${padding}px`,
           }}
         >
-          {paragraph}
-        </p>
+          <p
+            className={`${isChapterTitle ? 'font-bold text-xl my-4 text-center' : 'indent-8 text-justify'}`}
+            style={{
+              fontSize: `${settings.fontSize}px`,
+              lineHeight: settings.lineHeight,
+              wordBreak: 'break-all',
+              fontFamily: 'var(--font-family)', // 确保使用全局字体定义
+            }}
+          >
+            {paragraph}
+          </p>
+        </div>
       </div>
     );
   };
@@ -206,7 +215,7 @@ const Reader = () => {
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-hidden"
+      className="flex-1 overflow-hidden relative fade-in"
     >
       <List
         ref={listRef}
@@ -215,7 +224,7 @@ const Reader = () => {
         itemSize={getItemSize}
         width="100%"
         onScroll={handleScroll}
-        className={isImmersiveMode ? 'immersive-reader' : ''}
+        className={isImmersiveMode && !settings.showScrollbarInImmersive ? 'immersive-reader' : ''}
         style={{ overflow: 'auto' }}
       >
         {Row}
