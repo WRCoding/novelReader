@@ -466,8 +466,8 @@ ipcMain.handle('open-color-picker', async () => {
     const source = sources[0];
     const screenshot = source.thumbnail;
 
-    // 转换为 base64 data URL
-    const dataUrl = screenshot.toDataURL();
+    // 转换为 Buffer (避免 Base64 开销)
+    const pngBuffer = screenshot.toPNG();
 
     // 创建全屏取色窗口
     colorPickerWindow = new BrowserWindow({
@@ -487,12 +487,12 @@ ipcMain.handle('open-color-picker', async () => {
         contextIsolation: false
       }
     });
-    colorPickerWindow.webContents.openDevTools({ mode: 'detach' });
+    // colorPickerWindow.webContents.openDevTools({ mode: 'detach' });
     colorPickerWindow.loadFile('colorpicker.html');
 
     colorPickerWindow.webContents.once('did-finish-load', () => {
       colorPickerWindow.webContents.send('screenshot-ready', {
-        dataUrl: dataUrl,
+        buffer: pngBuffer,
         scaleFactor: scaleFactor
       });
     });

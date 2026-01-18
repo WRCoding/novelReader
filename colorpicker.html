@@ -135,9 +135,20 @@
 
     // 接收截图数据
     ipcRenderer.on('screenshot-ready', (event, data) => {
-      console.log('收到截图数据，长度:', data.dataUrl ? data.dataUrl.length : 0);
-      screenshot.src = data.dataUrl;
+      if (data.buffer) {
+        console.log('收到截图数据，Buffer 长度:', data.buffer.length);
+        const blob = new Blob([data.buffer], { type: 'image/png' });
+        const url = URL.createObjectURL(blob);
+        screenshot.src = url;
+        
+        // 页面卸载时释放 URL
+        window.addEventListener('unload', () => URL.revokeObjectURL(url), { once: true });
+      } else if (data.dataUrl) {
+        console.log('收到截图数据，DataURL 长度:', data.dataUrl.length);
+        screenshot.src = data.dataUrl;
+      }
       scaleFactor = data.scaleFactor || 1;
+      window.focus(); // Ensure window has focus
     });
 
     screenshot.onload = () => {

@@ -21,6 +21,7 @@ const SettingsWindow = () => {
   const [windowSizeSaved, setWindowSizeSaved] = useState(false);
   const [isMac, setIsMac] = useState(false);
   const [pickingColorType, setPickingColorType] = useState(null);
+  const [isLoadingColorPicker, setIsLoadingColorPicker] = useState(false);
   const colorInputRef = useRef(null);
   const fontColorInputRef = useRef(null);
 
@@ -142,7 +143,16 @@ const SettingsWindow = () => {
   const handleColorPicker = async (type) => {
     if (!window.electronAPI) return;
     setPickingColorType(type);
-    await window.electronAPI.openColorPicker();
+    setIsLoadingColorPicker(true);
+    try {
+      await window.electronAPI.openColorPicker();
+    } catch (error) {
+      console.error('Failed to open color picker:', error);
+      setIsLoadingColorPicker(false);
+      setPickingColorType(null);
+    } finally {
+      setIsLoadingColorPicker(false);
+    }
   };
 
   const handleFontSizeChange = (e) => {
@@ -314,11 +324,11 @@ const SettingsWindow = () => {
             />
             <button
               onClick={() => handleColorPicker('bg')}
-              disabled={pickingColorType !== null}
+              disabled={pickingColorType !== null || isLoadingColorPicker}
               className="px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap disabled:opacity-50"
               title="从屏幕取色"
             >
-              取色
+              {isLoadingColorPicker && pickingColorType === 'bg' ? '启动中...' : '取色'}
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-1">
@@ -391,11 +401,11 @@ const SettingsWindow = () => {
                 />
                 <button
                   onClick={() => handleColorPicker('font')}
-                  disabled={pickingColorType !== null}
+                  disabled={pickingColorType !== null || isLoadingColorPicker}
                   className="px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap disabled:opacity-50"
                   title="从屏幕取色"
                 >
-                  取色
+                  {isLoadingColorPicker && pickingColorType === 'font' ? '启动中...' : '取色'}
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">

@@ -59,6 +59,7 @@
       "preload.js",
       "index.html",
       "settings.html",
+      "colorpicker.html",
       "assets/**/*"
     ],
     "icon": "assets/icon.png",
