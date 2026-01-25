@@ -25,6 +25,7 @@
   "license": "ISC",
   "dependencies": {
     "chardet": "^2.1.1",
+    "electron-updater": "^6.7.3",
     "iconv-lite": "^0.7.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -50,6 +51,13 @@
   "build": {
     "appId": "com.novelreader.app",
     "productName": "rd",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "你的GitHub用户名",
+        "repo": "novelReader"
+      }
+    ],
     "directories": {
       "output": "release"
     },

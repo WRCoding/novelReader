@@ -119,10 +119,15 @@ const useStore = create((set, get) => ({
 
   // 设置当前文件（新导入时使用）
   setFile: (filePath, content, fileName) => {
+    const { bookshelf } = get();
+    // 检查书籍是否已存在，如果存在则使用保存的进度
+    const existingBook = bookshelf.find(book => book.filePath === filePath);
+    const scrollPosition = existingBook ? existingBook.scrollPosition : 0;
+
     // 添加到书架
     get().addToBookshelf(filePath, fileName, content);
-    // 设置为当前阅读
-    set({ filePath, content, fileName, scrollPosition: 0 });
+    // 设置为当前阅读（保留已有进度）
+    set({ filePath, content, fileName, scrollPosition });
   },
 
   // 返回书架

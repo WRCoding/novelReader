@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, screen, nativeImage, Tray, Menu, desktopCapturer } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -78,6 +79,46 @@ function createWindow(show = true) {
 }
 
 // 创建系统托盘
+// 从托盘导入文件
+async function importFileFromTray() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'Text Files', extensions: ['txt'] }
+    ]
+  });
+
+  if (result.canceled || !result.filePaths[0]) {
+    return;
+  }
+
+  const filePath = result.filePaths[0];
+
+  try {
+    // 读取文件
+    const buffer = fs.readFileSync(filePath);
+    const detectedEncoding = chardet.detect(buffer);
+    const encoding = detectedEncoding || 'utf-8';
+
+    let content;
+    if (encoding.toLowerCase() === 'utf-8' || encoding.toLowerCase() === 'utf8') {
+      content = buffer.toString('utf-8');
+    } else {
+      content = iconv.decode(buffer, encoding);
+    }
+
+    // 显示主窗口
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+      // 发送文件内容到渲染进程
+      mainWindow.webContents.send('file-imported', { filePath, content, fileName: path.basename(filePath) });
+    }
+  } catch (error) {
+    console.error('导入文件失败:', error);
+  }
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, 'assets', 'icon.png');
   const icon = nativeImage.createFromPath(iconPath);
@@ -100,6 +141,12 @@ function createTray() {
   tray = new Tray(trayIcon);
 
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '导入文件',
+      click: () => {
+        importFileFromTray();
+      }
+    },
     {
       label: '显示窗口',
       click: () => {
@@ -161,6 +208,15 @@ app.whenReady().then(() => {
 
   createWindow(false);  // 启动时不显示窗口
   createTray();  // 创建系统托盘
+
+  // 配置自动更新
+  autoUpdater.autoDownload = false; // 不自动下载，让用户确认
+  autoUpdater.autoInstallOnAppQuit = true; // 退出时自动安装
+
+  // 检查更新（延迟3秒，避免启动时卡顿）
+  setTimeout(() => {
+    autoUpdater.checkForUpdates();
+  }, 3000);
 });
 
 // macOS 上点击 Dock 图标时显示窗口
@@ -535,4 +591,66 @@ ipcMain.on('color-picker-cancelled', () => {
     settingsWindow.webContents.send('color-picker-result', { success: false, cancelled: true });
     settingsWindow.focus();
   }
+});
+
+// ========== 自动更新事件监听 ==========
+
+// 检查更新出错
+autoUpdater.on('error', (error) => {
+  console.log('更新出错:', error);
+});
+
+// 检查中
+autoUpdater.on('checking-for-update', () => {
+  console.log('正在检查更新...');
+});
+
+// 发现新版本
+autoUpdater.on('update-available', (info) => {
+  console.log('发现新版本:', info.version);
+
+  // 询问用户是否下载
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: '发现新版本',
+    message: `发现新版本 ${info.version}，是否下载更新？`,
+    buttons: ['下载', '稍后'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      // 用户点击下载
+      autoUpdater.downloadUpdate();
+    }
+  });
+});
+
+// 没有新版本
+autoUpdater.on('update-not-available', () => {
+  console.log('当前已是最新版本');
+});
+
+// 下载进度
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`下载进度: ${progressObj.percent.toFixed(2)}%`);
+});
+
+// 下载完成
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('更新下载完成');
+
+  // 询问用户是否立即安装
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: '更新已下载',
+    message: '新版本已下载完成，是否立即重启安装？',
+    buttons: ['立即安装', '稍后'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      // 退出并安装
+      autoUpdater.quitAndInstall();
+    }
+  });
 });

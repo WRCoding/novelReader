@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 文件操作
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+  onFileImported: (callback) => ipcRenderer.on('file-imported', (_, data) => callback(data)),
 
   // 窗口控制/
   minimizeWindow: () => ipcRenderer.send('window-minimize'),

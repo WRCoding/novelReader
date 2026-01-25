@@ -86,6 +86,18 @@ function App() {
     window.electronAPI.onSettingsUpdated(handleSettingsUpdated);
   }, [reloadSettings]);
 
+  // 监听托盘导入文件
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleFileImported = (data) => {
+      const { filePath, content, fileName } = data;
+      setFile(filePath, content, fileName);
+    };
+
+    window.electronAPI.onFileImported(handleFileImported);
+  }, [setFile]);
+
   // 保存数据当应用关闭时
   useEffect(() => {
     const handleBeforeUnload = () => {
